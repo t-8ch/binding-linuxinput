@@ -56,13 +56,15 @@ public class LinuxInputHandler extends BaseThingHandler {
     private final Channel keyChannel;
     private Future<Void> worker = null;
     private EvdevDevice device;
+    private final String defaultLabel;
     private static final long ID = 15;
 
     @Nullable
     private LinuxInputConfiguration config;
 
-    public LinuxInputHandler(Thing thing) {
+    public LinuxInputHandler(Thing thing, String defaultLabel) {
         super(thing);
+        this.defaultLabel = defaultLabel;
         grabbingChannel = ChannelBuilder.create(new ChannelUID(thing.getUID(), "grab"), CoreItemFactory.SWITCH)
                 .withType(CHANNEL_TYPE_DEVICE_GRAB)
                 .build();
@@ -119,7 +121,11 @@ public class LinuxInputHandler extends BaseThingHandler {
                         e.getMessage());
                 return;
             }
+            if (Objects.equals(defaultLabel, thing.getLabel())) {
+                customizer.withLabel(device.getName());
+            }
             customizer.withChannels(newChannels);
+            customizer.withProperties(getProperties(device));
             updateThing(customizer.build());
             for (Channel channel: newChannels) {
                 updateState(channel.getUID(), OpenClosedType.OPEN);
@@ -236,5 +242,27 @@ public class LinuxInputHandler extends BaseThingHandler {
             logger.error("Could not close device", e);
         }
         logger.info("disposed");
+    }
+
+    private static Map<String, String> getProperties(EvdevDevice device) {
+        Map<String, String> properties = new HashMap<>();
+        properties.put("physicalLocation", device.getPhys());
+        properties.put(Thing.PROPERTY_SERIAL_NUMBER, device.getUniq());
+        properties.put(Thing.PROPERTY_MODEL_ID, hex(device.getProdutId()));
+        properties.put(Thing.PROPERTY_VENDOR, hex(device.getVendorId()));
+        properties.put("busType", device.getBusType().map(Object::toString).orElseGet(() ->
+                hex(device.getBusId())
+        ));
+        properties.put(Thing.PROPERTY_FIRMWARE_VERSION, hex(device.getVersionId()));
+        properties.put("driverVersion", hex(device.getDriverVersion()));
+        return properties;
+    }
+
+    private static String hex(int i) {
+        return String.format("%04x", i);
+    }
+
+    private boolean isEmpty(String s) {
+        return s == null || s.isEmpty();
     }
 }

@@ -119,6 +119,42 @@ public class EvdevDevice implements Closeable {
         channel.close();
     }
 
+    public String getName() {
+        return lib.get_name(handle);
+    }
+
+    public String getPhys() {
+        return lib.get_phys(handle);
+    }
+
+    public String getUniq() {
+        return lib.get_uniq(handle);
+    }
+
+    public int getProdutId() {
+        return lib.get_id_product(handle);
+    }
+
+    public int getVendorId() {
+        return lib.get_id_vendor(handle);
+    }
+
+    public int getBusId() {
+        return lib.get_id_bustype(handle);
+    }
+
+    public Optional<EvdevLibrary.BusType> getBusType() {
+        return EvdevLibrary.BusType.fromInt(getBusId());
+    }
+
+    public int getVersionId() {
+        return lib.get_id_version(handle);
+    }
+
+    public int getDriverVersion() {
+        return lib.get_driver_version(handle);
+    }
+
     public boolean has(EvdevLibrary.Type type) {
         return lib.has_event_type(handle, type.intValue());
     }

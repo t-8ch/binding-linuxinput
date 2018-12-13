@@ -55,7 +55,10 @@ public class LinuxInputHandlerFactory extends BaseThingHandlerFactory {
         ThingTypeUID thingTypeUID = thing.getThingTypeUID();
 
         if (THING_TYPE_DEVICE.equals(thingTypeUID)) {
-            return new LinuxInputHandler(thing);
+            return new LinuxInputHandler(
+                    thing,
+                    getThingTypeByUID(thing.getThingTypeUID()).getLabel()
+            );
         }
 
         return null;
