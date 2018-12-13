@@ -36,9 +36,7 @@ import java.nio.channels.Selector;
 import java.util.*;
 import java.util.concurrent.*;
 
-import static org.openhab.binding.linuxinput.internal.LinuxInputBindingConstants.CHANNEL_TYPE_DEVICE_GRAB;
-import static org.openhab.binding.linuxinput.internal.LinuxInputBindingConstants.CHANNEL_TYPE_KEY;
-import static org.openhab.binding.linuxinput.internal.LinuxInputBindingConstants.CHANNEL_TYPE_KEY_PRESS;
+import static org.openhab.binding.linuxinput.internal.LinuxInputBindingConstants.*;
 
 /**
  * The {@link LinuxInputHandler} is responsible for handling commands, which are
@@ -109,7 +107,7 @@ public class LinuxInputHandler extends BaseThingHandler {
                 device = new EvdevDevice(config.path);
                 for (EvdevDevice.Key o: device.enumerateKeys()) {
                     Channel channel = ChannelBuilder
-                            .create(new ChannelUID(thing.getUID(), o.getName()), CoreItemFactory.CONTACT)
+                            .create(new ChannelUID(thing.getUID(), CHANNEL_GROUP_KEYPRESSES_ID, o.getName()), CoreItemFactory.CONTACT)
                             .withType(CHANNEL_TYPE_KEY_PRESS)
                             .build();
                     channels.put(o.getCode(), channel);

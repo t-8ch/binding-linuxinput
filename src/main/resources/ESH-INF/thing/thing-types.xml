@@ -4,10 +4,13 @@
 	xmlns:thing="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0"
 	xsi:schemaLocation="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0 http://eclipse.org/smarthome/schemas/thing-description-1.0.0.xsd">
 
-	<!-- Sample Thing Type -->
 	<thing-type id="input-device">
 		<label>LinuxInput Device</label>
 		<description>Input device</description>
+
+		<channel-groups>
+			<channel-group id="keypresses" typeId="keypressesx"/>
+		</channel-groups>
 
 		<config-description>
 			<parameter name="path" type="text" required="true">
@@ -38,13 +41,11 @@
 		</tags>
 	</channel-type>
 
-	<!-- Sample Channel Type -->
-	<!--
-	<channel-type id="sample-channel">
-		<item-type>linuxinputItem</item-type>
-		<label>LinuxInput Binding Channel</label>
-		<description>Sample channel for LinuxInput Binding</description>
-	</channel-type>
-	-->
+	<channel-group-type id="keypressesx">
+		<label>Key presses</label>
+		<channels>
+
+		</channels>
+	</channel-group-type>
 
 </thing:thing-descriptions>
