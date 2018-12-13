@@ -154,6 +154,7 @@
                 <configuration>
                     <instructions>
                         <Export-Package>!*</Export-Package>
+                        <Import-Package>!sun.misc,*</Import-Package>
                         <Embed-Directory>lib</Embed-Directory>
                         <Embed-Transitive>true</Embed-Transitive>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
