@@ -26,7 +26,7 @@ import org.eclipse.smarthome.core.thing.binding.builder.ThingBuilder;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.RefreshType;
-import org.eclipse.smarthome.core.types.State;
+import org.openhab.binding.linuxinput.internal.utils.ChannelUpdate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -177,18 +177,19 @@ public class LinuxInputHandler extends BaseThingHandler {
                 updateState(keyChannel.getUID(), new StringType());
             });
         }
-        getState(event).ifPresent(s ->
-                updateState(channel.getUID(), s)
-        );
+        getUpdate(event).ifPresent(u -> {
+            updateState(channel.getUID(), u.getState());
+            triggerChannel(channel.getUID(), u.getEvent());
+        });
     }
 
-    private static Optional<State> getState(EvdevDevice.InputEvent event) {
+    private static Optional<ChannelUpdate> getUpdate(EvdevDevice.InputEvent event) {
         int value = event.getValue();
         if (value == EvdevLibrary.KeyEventValue.DOWN) {
-            return Optional.of(OpenClosedType.CLOSED);
+            return Optional.of(new ChannelUpdate(OpenClosedType.CLOSED, CommonTriggerEvents.PRESSED));
         }
         if (value == EvdevLibrary.KeyEventValue.UP) {
-            return Optional.of(OpenClosedType.OPEN);
+            return Optional.of(new ChannelUpdate(OpenClosedType.OPEN, CommonTriggerEvents.RELEASED));
         }
         logger.error("Unexpected value {}", event.getValue());
         return Optional.empty();
