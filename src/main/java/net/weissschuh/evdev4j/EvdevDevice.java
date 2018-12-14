@@ -40,7 +40,10 @@ public class EvdevDevice implements Closeable {
     }
 
     public EvdevDevice(String path) throws IOException {
-        int fd = posix.open(path, combineFlags(OpenFlags.O_RDONLY, OpenFlags.O_CLOEXEC), 0);
+        int fd = posix.open(
+                path,
+                combineFlags(OpenFlags.class, OpenFlags.O_RDONLY, OpenFlags.O_CLOEXEC),
+                0);
         if (fd == -1) {
             throw new LastErrorException(posix, posix.errno(), path);
         }
