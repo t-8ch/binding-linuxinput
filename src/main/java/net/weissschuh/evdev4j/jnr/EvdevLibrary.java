@@ -33,6 +33,9 @@ import jnr.ffi.mapper.*;
 
 import java.util.Optional;
 
+import static net.weissschuh.evdev4j.Utils.constantFromInt;
+
+
 public interface EvdevLibrary {
     static EvdevLibrary load() {
         FunctionMapper evdevFunctionMapper = (functionName, context) -> "libevdev_" + functionName;
@@ -157,12 +160,7 @@ public interface EvdevLibrary {
         }
 
         public static Optional<Type> fromInt(int i) {
-            for (Type t: Type.values()) {
-                if (t.i == i) {
-                    return Optional.of(t);
-                }
-            }
-            return Optional.empty();
+            return constantFromInt(Type.values(), i);
         }
 
         @Override

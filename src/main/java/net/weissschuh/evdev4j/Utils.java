@@ -18,4 +18,14 @@ public class Utils {
         }
         return result;
     }
+
+
+    public static <T extends Constant> Optional<T> constantFromInt(T[] cs, int i) {
+        for (T c: cs) {
+            if (c.intValue() == i) {
+                return Optional.of(c);
+            }
+        }
+        return Optional.empty();
+    }
 }
