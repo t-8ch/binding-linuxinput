@@ -30,6 +30,7 @@ import jnr.ffi.Struct;
 import jnr.ffi.annotations.Out;
 import jnr.ffi.byref.PointerByReference;
 import jnr.ffi.mapper.*;
+import net.weissschuh.evdev4j.Utils;
 
 import java.util.Optional;
 
@@ -211,12 +212,7 @@ public interface EvdevLibrary {
         }
 
         public static Optional<BusType> fromInt(int i) {
-            for (BusType t: BusType.values()) {
-                if (t.i == i) {
-                    return Optional.of(t);
-                }
-            }
-            return Optional.empty();
+            return Utils.constantFromInt(BusType.values(), i);
         }
 
         @Override
