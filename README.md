@@ -1,6 +1,6 @@
 # Linux Input Binding
 
-This project provides an Eclipse Smarhome and Openhab 2 compatible binding to
+This project provides an Eclipse Smarthome and Openhab2 compatible binding to
 inputdevices under Linux.
 It also provides a fairly generic Java binding to the libevdev library.
 Currently only keyboards are handled.
