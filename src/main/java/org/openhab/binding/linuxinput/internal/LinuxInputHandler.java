@@ -108,8 +108,10 @@ public class LinuxInputHandler extends BaseThingHandler {
             try {
                 device = new EvdevDevice(config.path);
                 for (EvdevDevice.Key o: device.enumerateKeys()) {
+                    String name = o.getName();
                     Channel channel = ChannelBuilder
-                            .create(new ChannelUID(thing.getUID(), CHANNEL_GROUP_KEYPRESSES_ID, o.getName()), CoreItemFactory.CONTACT)
+                            .create(new ChannelUID(thing.getUID(), CHANNEL_GROUP_KEYPRESSES_ID, name), CoreItemFactory.CONTACT)
+                            .withLabel(name)
                             .withType(CHANNEL_TYPE_KEY_PRESS)
                             .build();
                     channels.put(o.getCode(), channel);
