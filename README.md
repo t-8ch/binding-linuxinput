@@ -9,7 +9,7 @@ attached. (USB, Bluetooth, serial...)
 
 ## Current status
 
-Alpha.
+Beta.
 
 This project is in an early development phase.
 The basics should be usable but the ergonomics are not completely there yet.
