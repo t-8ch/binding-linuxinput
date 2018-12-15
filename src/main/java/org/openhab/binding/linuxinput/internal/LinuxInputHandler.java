@@ -26,7 +26,6 @@ import org.eclipse.smarthome.core.thing.binding.builder.ThingBuilder;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.RefreshType;
-import org.openhab.binding.linuxinput.internal.utils.ChannelUpdate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
