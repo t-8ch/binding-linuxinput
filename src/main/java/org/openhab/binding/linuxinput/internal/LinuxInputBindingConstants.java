@@ -33,6 +33,4 @@ public class LinuxInputBindingConstants {
     public static final ChannelTypeUID CHANNEL_TYPE_DEVICE_GRAB = new ChannelTypeUID(BINDING_ID, "device-grab");
     public static final ChannelTypeUID CHANNEL_TYPE_KEY = new ChannelTypeUID(BINDING_ID, "key");
     public static final String CHANNEL_GROUP_KEYPRESSES_ID = "keypresses";
-
-    public static final String DEFAULT_THING_LABEL = "LinuxInput Device";
 }
