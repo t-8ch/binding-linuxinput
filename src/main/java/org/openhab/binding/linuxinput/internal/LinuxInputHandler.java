@@ -94,6 +94,7 @@ public class LinuxInputHandler extends BaseThingHandler {
         }
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public void initialize() {
         logger.warn("Initialize: {}", ID);
