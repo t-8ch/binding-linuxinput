@@ -178,15 +178,13 @@ public class LinuxInputHandler extends BaseThingHandler {
         }
         logger.debug("Got event: {}", event);
         // Documented in README.md
-        switch (event.getValue()) {
+        int eventValue = event.getValue();
+        switch (eventValue) {
             case EvdevLibrary.KeyEventValue.DOWN:
-                Optional<String> codeName = event.codeName();
-                if (!codeName.isPresent()) {
-                    logger.warn("Could not determine key name for value {}, not sending global events", event.getValue());
-                }
-                codeName.ifPresent(s -> updateState(keyChannel.getUID(), new StringType(s)));
+                String keyCode = channel.getUID().getIdWithoutGroup();
+                updateState(keyChannel.getUID(), new StringType(keyCode));
                 updateState(channel.getUID(), OpenClosedType.CLOSED);
-                codeName.ifPresent(s -> triggerChannel(keyChannel.getUID(), s));
+                triggerChannel(keyChannel.getUID(), keyCode);
                 triggerChannel(channel.getUID(), CommonTriggerEvents.PRESSED);
                 updateState(keyChannel.getUID(), new StringType());
                 break;
@@ -198,7 +196,7 @@ public class LinuxInputHandler extends BaseThingHandler {
                 /* Ignored */
                 break;
             default:
-                logger.error("Unexpected event value {}", event.getValue());
+                logger.error("Unexpected event value for channel {}: {}", channel, eventValue);
                 break;
         }
     }
