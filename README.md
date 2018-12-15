@@ -21,6 +21,42 @@ The user running will have to have full access to the input device.
 Libevdev has to be installed. It should be available through your
 operating systems packagemanager.
 
+## Usage
+
+### Configuration
+
+The Thing has to be configured with the path of the devicenode to access.
+This should be in the form of `/dev/input/eventX` where `X` is specific to your device.
+
+### Channels
+
+Each Thing provides multiple channels
+
+* A `grab` channel that allows to grab the device, withholding the device inputs form other users.
+* A `key` channel that aggregates all events.
+* Per physical key channels that.
+
+### Events
+
+The following happens when pressing and releasing a key:
+
+#### Press
+
+1) State of global key channel updated to new key.
+2) State of per-key channel updated to `"CLOSED"`.
+3) Global key channel triggered with the current key name.
+4) Per-key channel triggered with `"PRESSED"`".
+5) State of global key channel updated to `""` (Empty string)
+
+#### Release
+
+1) State of per-key channel updated to `"OPEN"`
+2) Per-key channel triggered with `"RELEASED"`
+
+#### Rationale
+
+Channel states are updated first to allow rules triggered by channel triggers to access the new state.
+
 ## Implementation note
 
 Contrary to other Smarthome/Openhab plugins, this plugin uses the maven-bundle-plugin for the project setup.

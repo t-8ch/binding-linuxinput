@@ -175,36 +175,32 @@ public class LinuxInputHandler extends BaseThingHandler {
             logger.error("Could not find channel for code {}, aborting", event.getCode());
             return;
         }
-        logger.debug("Got {}", event);
-        if (event.getValue() == EvdevLibrary.KeyEventValue.DOWN) {
-            event.codeName().ifPresent(n -> {
-                updateState(keyChannel.getUID(), new StringType(n));
-                triggerChannel(keyChannel.getUID(), n);
+        logger.debug("Got event: {}", event);
+        // Documented in README.md
+        switch (event.getValue()) {
+            case EvdevLibrary.KeyEventValue.DOWN:
+                Optional<String> codeName = event.codeName();
+                if (!codeName.isPresent()) {
+                    logger.warn("Could not determine key name for value {}, not sending global events", event.getValue());
+                }
+                codeName.ifPresent(s -> updateState(keyChannel.getUID(), new StringType(s)));
+                updateState(channel.getUID(), OpenClosedType.CLOSED);
+                codeName.ifPresent(s -> triggerChannel(keyChannel.getUID(), s));
+                triggerChannel(channel.getUID(), CommonTriggerEvents.PRESSED);
                 updateState(keyChannel.getUID(), new StringType());
-            });
+                break;
+            case EvdevLibrary.KeyEventValue.UP:
+                updateState(channel.getUID(), OpenClosedType.OPEN);
+                triggerChannel(channel.getUID(), CommonTriggerEvents.RELEASED);
+                break;
+            case EvdevLibrary.KeyEventValue.REPEAT:
+                /* Ignored */
+                break;
+            default:
+                logger.error("Unexpected event value {}", event.getValue());
+                break;
         }
-        getUpdate(event).ifPresent(u -> {
-            updateState(channel.getUID(), u.getState());
-            triggerChannel(channel.getUID(), u.getEvent());
-        });
     }
-
-    private static Optional<ChannelUpdate> getUpdate(EvdevDevice.InputEvent event) {
-        int value = event.getValue();
-        if (value == EvdevLibrary.KeyEventValue.DOWN) {
-            return Optional.of(new ChannelUpdate(OpenClosedType.CLOSED, CommonTriggerEvents.PRESSED));
-        }
-        if (value == EvdevLibrary.KeyEventValue.UP) {
-            return Optional.of(new ChannelUpdate(OpenClosedType.OPEN, CommonTriggerEvents.RELEASED));
-        }
-        // Not supported
-        if (value == EvdevLibrary.KeyEventValue.REPEAT) {
-            return Optional.empty();
-        }
-        logger.error("Unexpected value {}", event.getValue());
-        return Optional.empty();
-    }
-
 
     private void stopWorker() throws InterruptedException, ExecutionException, TimeoutException {
         logger.info("interrupting worker");
