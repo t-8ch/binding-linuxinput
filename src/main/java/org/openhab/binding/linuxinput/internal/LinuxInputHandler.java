@@ -197,6 +197,10 @@ public class LinuxInputHandler extends BaseThingHandler {
         if (value == EvdevLibrary.KeyEventValue.UP) {
             return Optional.of(new ChannelUpdate(OpenClosedType.OPEN, CommonTriggerEvents.RELEASED));
         }
+        // Not supported
+        if (value == EvdevLibrary.KeyEventValue.REPEAT) {
+            return Optional.empty();
+        }
         logger.error("Unexpected value {}", event.getValue());
         return Optional.empty();
     }
