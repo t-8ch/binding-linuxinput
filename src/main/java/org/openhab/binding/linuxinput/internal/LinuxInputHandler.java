@@ -30,11 +30,9 @@ public class LinuxInputHandler extends BaseThingHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(LinuxInputHandler.class);
 
-    private final Map<Integer, Channel> channels = Collections.synchronizedMap(
-            new HashMap<>()
-    );
-    private final Channel grabbingChannel;
-    private final Channel keyChannel;
+    private Map<Integer, Channel> channels;
+    private Channel grabbingChannel;
+    private Channel keyChannel;
     private Future<Void> worker = null;
     private EvdevDevice device;
     private final String defaultLabel;
@@ -46,12 +44,6 @@ public class LinuxInputHandler extends BaseThingHandler {
     public LinuxInputHandler(Thing thing, String defaultLabel) {
         super(thing);
         this.defaultLabel = defaultLabel;
-        grabbingChannel = ChannelBuilder.create(new ChannelUID(thing.getUID(), "grab"), CoreItemFactory.SWITCH)
-                .withType(CHANNEL_TYPE_DEVICE_GRAB)
-                .build();
-        keyChannel = ChannelBuilder.create(new ChannelUID(thing.getUID(), "key"), CoreItemFactory.STRING)
-                .withType(CHANNEL_TYPE_KEY)
-                .build();
     }
 
     @Override
@@ -80,6 +72,15 @@ public class LinuxInputHandler extends BaseThingHandler {
     public void initialize() {
         logger.warn("Initialize: {}", ID);
         config = getConfigAs(LinuxInputConfiguration.class);
+        channels = Collections.synchronizedMap(
+                new HashMap<>()
+        );
+        grabbingChannel = ChannelBuilder.create(new ChannelUID(thing.getUID(), "grab"), CoreItemFactory.SWITCH)
+                .withType(CHANNEL_TYPE_DEVICE_GRAB)
+                .build();
+        keyChannel = ChannelBuilder.create(new ChannelUID(thing.getUID(), "key"), CoreItemFactory.STRING)
+                .withType(CHANNEL_TYPE_KEY)
+                .build();
         updateStatus(ThingStatus.UNKNOWN);
 
         scheduler.execute(() -> {
@@ -156,7 +157,12 @@ public class LinuxInputHandler extends BaseThingHandler {
         }
         Channel channel = channels.get(event.getCode());
         if (channel == null) {
-            logger.error("Could not find channel for code {}, aborting", event.getCode());
+            String msg = "Could not find channel for code {}";
+            if (isInitialized()) {
+                logger.error(msg, event.getCode());
+            } else {
+                logger.debug(msg, event.getCode());
+            }
             return;
         }
         logger.debug("Got event: {}", event);
@@ -242,9 +248,5 @@ public class LinuxInputHandler extends BaseThingHandler {
 
     private static String hex(int i) {
         return String.format("%04x", i);
-    }
-
-    private boolean isEmpty(String s) {
-        return s == null || s.isEmpty();
     }
 }
