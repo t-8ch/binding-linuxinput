@@ -9,7 +9,7 @@
 		<description>Input device</description>
 
 		<channel-groups>
-			<channel-group id="keypresses" typeId="keypressesx"/>
+			<channel-group id="keypresses" typeId="keypresses"/>
 		</channel-groups>
 
 		<config-description>
@@ -41,7 +41,7 @@
 		</tags>
 	</channel-type>
 
-	<channel-group-type id="keypressesx">
+	<channel-group-type id="keypresses">
 		<label>Key presses</label>
 		<channels>
 
