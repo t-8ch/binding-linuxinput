@@ -31,7 +31,6 @@ public class LinuxInputHandler extends BaseThingHandler {
     private static final Logger logger = LoggerFactory.getLogger(LinuxInputHandler.class);
 
     private Map<Integer, Channel> channels;
-    private Channel grabbingChannel;
     private Channel keyChannel;
     private Future<Void> worker = null;
     private EvdevDevice device;
@@ -49,18 +48,7 @@ public class LinuxInputHandler extends BaseThingHandler {
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
         logger.info("Command {} for channel {}", command, channelUID);
-        if (grabbingChannel.getUID().equals(channelUID) && (command instanceof OnOffType)) {
-            if (command == OnOffType.ON) {
-                logger.info("Grabbing device: {}", device);
-                device.grab();
-                updateState(grabbingChannel.getUID(), OnOffType.ON);
-            } else {
-                logger.info("Releasing grab on device {}", device);
-                device.grab();
-                device.ungrab();
-                updateState(grabbingChannel.getUID(), OnOffType.OFF);
-            }
-        } else if (command instanceof RefreshType) {
+        if (command instanceof RefreshType) {
             logger.warn("Got refresh command for {}, ignoring", command);
         } else {
             logger.warn("Unexpected command {} for channel {}", command, channelUID);
@@ -75,9 +63,6 @@ public class LinuxInputHandler extends BaseThingHandler {
         channels = Collections.synchronizedMap(
                 new HashMap<>()
         );
-        grabbingChannel = ChannelBuilder.create(new ChannelUID(thing.getUID(), "grab"), CoreItemFactory.SWITCH)
-                .withType(CHANNEL_TYPE_DEVICE_GRAB)
-                .build();
         keyChannel = ChannelBuilder.create(new ChannelUID(thing.getUID(), "key"), CoreItemFactory.STRING)
                 .withType(CHANNEL_TYPE_KEY)
                 .build();
@@ -86,7 +71,6 @@ public class LinuxInputHandler extends BaseThingHandler {
         scheduler.execute(() -> {
             ThingBuilder customizer = editThing();
             List<Channel> newChannels = new ArrayList<>();
-            newChannels.add(grabbingChannel);
             newChannels.add(keyChannel);
             try {
                 device = new EvdevDevice(config.path);
@@ -116,14 +100,17 @@ public class LinuxInputHandler extends BaseThingHandler {
                 updateState(channel.getUID(), OpenClosedType.OPEN);
             }
             updateStatus(ThingStatus.ONLINE);
-            worker = scheduler.submit(() -> {
-                try {
-                    handleEvents();
-                } catch (IOException e) {
-                    logger.error("Error while handling events", e);
-                }
-                return null;
-            });
+            if (config.enable) {
+                worker = scheduler.submit(() -> {
+                    device.grab();
+                    try {
+                        handleEvents();
+                    } catch (IOException e) {
+                        logger.error("Error while handling events", e);
+                    }
+                    return null;
+                });
+            }
         });
     }
 
