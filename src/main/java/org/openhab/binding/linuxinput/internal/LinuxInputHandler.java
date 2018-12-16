@@ -5,13 +5,11 @@ import net.weissschuh.evdev4j.jnr.EvdevLibrary;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.core.library.CoreItemFactory;
-import org.eclipse.smarthome.core.library.types.OnOffType;
 import org.eclipse.smarthome.core.library.types.OpenClosedType;
 import org.eclipse.smarthome.core.library.types.StringType;
 import org.eclipse.smarthome.core.thing.*;
 import org.eclipse.smarthome.core.thing.binding.builder.ChannelBuilder;
 import org.eclipse.smarthome.core.thing.binding.builder.ThingBuilder;
-import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.RefreshType;
 import org.slf4j.Logger;
@@ -21,18 +19,16 @@ import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.*;
-import java.util.concurrent.*;
 
 import static org.openhab.binding.linuxinput.internal.LinuxInputBindingConstants.*;
 
 @NonNullByDefault
-public class LinuxInputHandler extends BaseThingHandler {
+public final class LinuxInputHandler extends DeviceReadingHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(LinuxInputHandler.class);
 
     private Map<Integer, Channel> channels;
     private Channel keyChannel;
-    private Future<Void> worker = null;
     private EvdevDevice device;
     private final String defaultLabel;
     private static final long ID = 15;
@@ -55,9 +51,8 @@ public class LinuxInputHandler extends BaseThingHandler {
         }
     }
 
-    @SuppressWarnings("deprecation")
     @Override
-    public void initialize() {
+    boolean immediateSetup() {
         logger.warn("Initialize: {}", ID);
         config = getConfigAs(LinuxInputConfiguration.class);
         channels = Collections.synchronizedMap(
@@ -66,58 +61,64 @@ public class LinuxInputHandler extends BaseThingHandler {
         keyChannel = ChannelBuilder.create(new ChannelUID(thing.getUID(), "key"), CoreItemFactory.STRING)
                 .withType(CHANNEL_TYPE_KEY)
                 .build();
-        updateStatus(ThingStatus.UNKNOWN);
-
-        scheduler.execute(() -> {
-            ThingBuilder customizer = editThing();
-            List<Channel> newChannels = new ArrayList<>();
-            newChannels.add(keyChannel);
-            try {
-                device = new EvdevDevice(config.path);
-                for (EvdevDevice.Key o: device.enumerateKeys()) {
-                    String name = o.getName();
-                    Channel channel = ChannelBuilder
-                            .create(new ChannelUID(thing.getUID(), CHANNEL_GROUP_KEYPRESSES_ID, name), CoreItemFactory.CONTACT)
-                            .withLabel(name)
-                            .withType(CHANNEL_TYPE_KEY_PRESS)
-                            .build();
-                    channels.put(o.getCode(), channel);
-                    newChannels.add(channel);
-                }
-            } catch (IOException e) {
-                logger.error("ERROR", e);
-                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                        e.getMessage());
-                return;
-            }
-            if (Objects.equals(defaultLabel, thing.getLabel())) {
-                customizer.withLabel(device.getName());
-            }
-            customizer.withChannels(newChannels);
-            customizer.withProperties(getProperties(device));
-            updateThing(customizer.build());
-            for (Channel channel: newChannels) {
-                updateState(channel.getUID(), OpenClosedType.OPEN);
-            }
-            updateStatus(ThingStatus.ONLINE);
-            if (config.enable) {
-                worker = scheduler.submit(() -> {
-                    device.grab();
-                    try {
-                        handleEvents();
-                    } catch (IOException e) {
-                        logger.error("Error while handling events", e);
-                    }
-                    return null;
-                });
-            }
-        });
+        String statusDesc = null;
+        if (!config.enable) {
+            statusDesc = "Administratively disabled";
+        }
+        updateStatus(
+                ThingStatus.OFFLINE,
+                ThingStatusDetail.CONFIGURATION_PENDING,
+                statusDesc
+        );
+        return true;
     }
 
-    private void handleEvents() throws IOException {
+    @Override
+    boolean delayedSetup() throws IOException {
+        ThingBuilder customizer = editThing();
+        List<Channel> newChannels = new ArrayList<>();
+        newChannels.add(keyChannel);
+        device = new EvdevDevice(config.path);
+        for (EvdevDevice.Key o: device.enumerateKeys()) {
+            String name = o.getName();
+            Channel channel = ChannelBuilder
+                    .create(new ChannelUID(thing.getUID(), CHANNEL_GROUP_KEYPRESSES_ID, name), CoreItemFactory.CONTACT)
+                    .withLabel(name)
+                    .withType(CHANNEL_TYPE_KEY_PRESS)
+                    .build();
+            channels.put(o.getCode(), channel);
+            newChannels.add(channel);
+        }
+        if (Objects.equals(defaultLabel, thing.getLabel())) {
+            customizer.withLabel(device.getName());
+        }
+        customizer.withChannels(newChannels);
+        customizer.withProperties(getProperties(device));
+        updateThing(customizer.build());
+        for (Channel channel: newChannels) {
+            updateState(channel.getUID(), OpenClosedType.OPEN);
+        }
+        updateStatus(ThingStatus.ONLINE);
+        return config.enable;
+    }
 
+    @Override
+    protected void closeDevice() throws IOException {
+        if (device != null) {
+            device.close();
+        }
+        logger.info("device closed");
+        device = null;
+    }
+
+
+    @Override
+    void handleEventsInThread() throws IOException {
         Selector selector = EvdevDevice.openSelector();
         SelectionKey evdevReady = device.register(selector);
+
+        logger.info("Grabbing device {}", device);
+        device.grab(); // ungrab will happen implicitly at device.close()
 
         while (true) {
             if (Thread.currentThread().isInterrupted()) {
@@ -175,48 +176,6 @@ public class LinuxInputHandler extends BaseThingHandler {
                 logger.error("Unexpected event value for channel {}: {}", channel, eventValue);
                 break;
         }
-    }
-
-    private void stopWorker() throws InterruptedException, ExecutionException, TimeoutException {
-        logger.info("interrupting worker");
-        if (worker == null) {
-            return;
-        }
-        worker.cancel(true);
-        try {
-            worker.get(30, TimeUnit.SECONDS);
-        } catch (CancellationException e) {
-            /* expected */
-        }
-        logger.info("worker interrupted");
-        assert worker.isDone();
-        worker = null;
-    }
-
-    private void closeDevice() throws IOException {
-        if (device != null) {
-            device.close();
-        }
-        logger.info("device closed");
-        device = null;
-    }
-
-    @Override
-    public void dispose() {
-        logger.info("disposing");
-        try {
-            stopWorker();
-        } catch (ExecutionException | TimeoutException e) {
-            logger.error("Interrupted while waiting for worker", e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-        try {
-            closeDevice();
-        } catch (IOException e) {
-            logger.error("Could not close device", e);
-        }
-        logger.info("disposed");
     }
 
     private static Map<String, String> getProperties(EvdevDevice device) {
