@@ -14,11 +14,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
+import java.nio.file.*;
 import java.time.Duration;
 import java.util.Collections;
-import java.util.Optional;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -28,11 +27,10 @@ import static org.openhab.binding.linuxinput.internal.LinuxInputBindingConstants
 public class LinuxInputDiscoveryService extends AbstractDiscoveryService {
     private static final Logger logger = LoggerFactory.getLogger(LinuxInputDiscoveryService.class);
 
-    private ScheduledFuture<?> discoveryJob;
+    private Future<?> discoveryJob;
     private static final Duration refreshInterval = Duration.ofSeconds(50);
     private static final Duration timeout = Duration.ofSeconds(30);
     private static final Path deviceDirectory = FileSystems.getDefault().getPath("/dev/input");
-    private Runnable runnable = this::startScan;
 
     public LinuxInputDiscoveryService() {
         super(Collections.singleton(THING_TYPE_DEVICE), (int) timeout.getSeconds(), true);
@@ -41,6 +39,7 @@ public class LinuxInputDiscoveryService extends AbstractDiscoveryService {
     @Override
     protected void startScan() {
         logger.warn("startScan {}", deviceDirectory);
+        removeOlderResults(getTimestampOfLastScan());
         File directory = deviceDirectory.toFile();
         if (directory == null) {
             logger.error("Could not open device directory {}", deviceDirectory);
@@ -109,8 +108,63 @@ public class LinuxInputDiscoveryService extends AbstractDiscoveryService {
     protected void startBackgroundDiscovery() {
         logger.debug("Start background discovery");
         if (discoveryJob == null || discoveryJob.isCancelled()) {
-            discoveryJob = scheduler.scheduleWithFixedDelay(runnable, 0, refreshInterval.getSeconds(), TimeUnit.SECONDS);
+            WatchService watchService = null;
+            try {
+                watchService = makeWatcher();
+            } catch (IOException e) {
+                logger.warn("Could not start event based watcher, falling back to polling", e);
+            }
+            if (watchService != null) {
+                WatchService watcher = watchService;
+                discoveryJob = scheduler.submit(() -> waitForNewDevices(watcher));
+            } else {
+                discoveryJob = scheduler.scheduleWithFixedDelay(
+                        this::startScan, 0, refreshInterval.getSeconds(), TimeUnit.SECONDS);
+            }
         }
+    }
+
+    private WatchService makeWatcher() throws IOException {
+        WatchService watchService = FileSystems.getDefault().newWatchService();
+        deviceDirectory.register(
+                watchService,
+                StandardWatchEventKinds.ENTRY_CREATE,
+                StandardWatchEventKinds.ENTRY_DELETE,
+                StandardWatchEventKinds.ENTRY_MODIFY
+        );
+        return watchService;
+    }
+
+    private void waitForNewDevices(WatchService watchService) {
+        while (!Thread.currentThread().isInterrupted()) {
+            boolean gotEvent = waitAndDrainAll(watchService, 60, TimeUnit.SECONDS);
+            logger.info("Input devices changed: {}. Triggering rescan: {}", gotEvent, gotEvent);
+
+            if (gotEvent) {
+                startScan();
+            }
+        }
+        logger.warn("Discovery stopped");
+    }
+
+    private static boolean waitAndDrainAll(WatchService watchService, int timeout, TimeUnit unit) {
+        WatchKey event;
+        try {
+            event = watchService.poll(timeout, unit);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+        if (event == null) {
+            return false;
+        }
+        do {
+            event.pollEvents();
+            event.reset();
+            event = watchService.poll();
+        } while (event != null);
+
+        return true;
     }
 
     @Override
