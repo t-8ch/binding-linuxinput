@@ -98,7 +98,9 @@ public final class LinuxInputHandler extends DeviceReadingHandler {
         for (Channel channel: newChannels) {
             updateState(channel.getUID(), OpenClosedType.OPEN);
         }
-        updateStatus(ThingStatus.ONLINE);
+        if (config.enable) {
+            updateStatus(ThingStatus.ONLINE);
+        }
         return config.enable;
     }
 
