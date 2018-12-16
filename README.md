@@ -1,7 +1,7 @@
 # Linux Input Binding
 
 This project provides an Eclipse Smarthome and Openhab2 compatible binding to
-inputdevices under Linux.
+input devices under Linux.
 It also provides a fairly generic Java binding to the libevdev library.
 Currently only keyboards are handled.
 The binding supports all kinds keyboards, irrespective on how they are
@@ -25,16 +25,17 @@ operating systems packagemanager.
 
 ### Configuration
 
-The Thing has to be configured with the path of the devicenode to access.
+The Thing has to be configured with the path of the input device to access.
 This should be in the form of `/dev/input/eventX` where `X` is specific to your device.
+You also have to active the Thing in the configuration.
+When activated *only* the Thing will receive events from the input device.
 
 ### Channels
 
 Each Thing provides multiple channels
 
-* A `grab` channel that allows to grab the device, withholding the device inputs form other users.
 * A `key` channel that aggregates all events.
-* Per physical key channels that.
+* Per physical key channels.
 
 ### Events
 
