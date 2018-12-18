@@ -18,7 +18,6 @@ import java.nio.file.*;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import static org.openhab.binding.linuxinput.internal.LinuxInputBindingConstants.THING_TYPE_DEVICE;
@@ -38,9 +37,17 @@ public class LinuxInputDiscoveryService extends AbstractDiscoveryService {
 
     @Override
     protected void startScan() {
+        performScan(false);
+    }
+
+    private void performScan(boolean applyTtl) {
         logger.warn("startScan {}", deviceDirectory);
         removeOlderResults(getTimestampOfLastScan());
         File directory = deviceDirectory.toFile();
+        Duration ttl = null;
+        if (applyTtl) {
+            ttl = refreshInterval.multipliedBy(2);
+        }
         if (directory == null) {
             logger.error("Could not open device directory {}", deviceDirectory);
             return;
@@ -50,11 +57,11 @@ public class LinuxInputDiscoveryService extends AbstractDiscoveryService {
             throw new IllegalStateException(directory + " is not a directory");
         }
         for (File file: devices) {
-            handleFile(file);
+            handleFile(file, ttl);
         }
     }
 
-    private void handleFile(File file) {
+    private void handleFile(File file, Duration ttl) {
         logger.trace("Discovering file {}", file);
         if (file.isDirectory()) {
             logger.trace("{} is not a file, ignoring", file);
@@ -68,7 +75,7 @@ public class LinuxInputDiscoveryService extends AbstractDiscoveryService {
                 .create(new ThingUID(THING_TYPE_DEVICE, file.getName()))
                 .withProperty("path", file.getAbsolutePath())
                 .withRepresentationProperty(file.getName())
-                .withTTL(refreshInterval.multipliedBy(2).getSeconds());
+                .withTTL(ttl.getSeconds());
         boolean shouldDiscover = enrichDevice(result, file);
         if (shouldDiscover) {
             DiscoveryResult thing = result.build();
@@ -119,7 +126,7 @@ public class LinuxInputDiscoveryService extends AbstractDiscoveryService {
                 discoveryJob = scheduler.submit(() -> waitForNewDevices(watcher));
             } else {
                 discoveryJob = scheduler.scheduleWithFixedDelay(
-                        this::startScan, 0, refreshInterval.getSeconds(), TimeUnit.SECONDS);
+                        () -> performScan(true), 0, refreshInterval.getSeconds(), TimeUnit.SECONDS);
             }
         }
     }
@@ -141,7 +148,7 @@ public class LinuxInputDiscoveryService extends AbstractDiscoveryService {
             logger.info("Input devices changed: {}. Triggering rescan: {}", gotEvent, gotEvent);
 
             if (gotEvent) {
-                startScan();
+                performScan(false);
             }
         }
         logger.warn("Discovery stopped");
