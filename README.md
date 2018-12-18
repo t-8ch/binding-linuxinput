@@ -67,6 +67,7 @@ It also removes a lot of boilerplate from the project.
 ## Tested with
 
 * Openhab 2.3.0
+* Openhab 2.4.0
 
 ## Keywords
 
