@@ -173,6 +173,7 @@
                         <Bundle-Activation-Policy>lazy</Bundle-Activation-Policy>
                         <Bundle-SymbolicName>$(maven-symbolicname);singleton:=true</Bundle-SymbolicName>
                         <Automatic-Module-Name>$(maven-symbolicname)</Automatic-Module-Name>
+                        <Require-Capability>osgi.native;filter:="(osgi.native.osname=Linux)"</Require-Capability>
                     </instructions>
                 </configuration>
             </plugin>
