@@ -3,7 +3,7 @@
 
     <groupId>net.weissschuh.openhab.binding</groupId>
     <artifactId>linuxinput</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0-rc1</version>
 
     <developers>
         <developer>
